@@ -1,0 +1,68 @@
+#include<stdint.h>
+#include "stm32f4xx.h"
+#define GPIOAEN (1U<<0)
+#define UART2EN (1U<<17)
+
+#define CR1_TE (1U<<3)
+#define CR1_UE (1U<<13)
+#define SR_TXE (1U<<7)
+
+#define SYS_FREQ 16000000
+#define APB1_CLK SYS_FREQ
+
+#define UART_BAUDRATE 115200
+
+
+static void uart_set_baudrate(USART_TypeDef *USARTx, unit32_t PeriphCLK, unit32_t BaudRate);
+static unit16_t compute_uart_bd(unit32_t PeriphCLK, unit32_t BaudRate);
+void uart2_tx_init(void);
+void uart2_write(int ch);
+
+
+int main(void)
+{
+	uart2_tx_init();
+	while(1)
+	{
+		uart2_write('hello');
+	}
+}
+
+void uart2_tx_init(void)
+{
+	/*CONGIG UART
+	 * ENABLE CLOCK ACCESS TO GPIOA*/
+	RCC-> AHB1ENR |= GPIOAEN;
+	 /* SET PA2 TO ALTERNATE FUNCTION*/
+	GPIOA->MODER &=~(1U<<4);
+	GPIOA->MODER |=(1U<<5);
+	/* SET PA2 TO UART TX (AF07)*/
+	GPIO->AFR[0] |= (1U<<8);
+	GPIO->AFR[0] |= (1U<<9);
+	GPIO->AFR[0] |= (1U<<10);
+	GPIO->AFR[0] &= ~(1U<<11);
+	 /* CONFIG USART MODULE*/
+	RCC->APB1ENR |= UART2EN;
+	/* CONGIG BAUDE RATE*/
+	uart_set_baudrate(USART2,APB1_CLK,UART_BAUDRATE);
+	 /* CONFIG THE TRANSFER DIRECTION*/
+	USART2->CR1 = CR1_TE;
+	 /* ENABLE UART MODULE*/
+	USART2->CR1 |= CR1_UE;
+
+
+}
+void uart2_write(void){
+	/*Make sure the transmit data register is empty*/
+	while(!(USART2->SR & SR_TXE)){};
+	/*write to transmit data register*/
+	USART2->DR = (ch & 0xff);
+}
+ static void uart_set_baudrate(USART_TypeDef *USARTx, unit32_t PeriphCLK, unit32_t BaudRate)
+ {
+	 USARTx->BRR = compute_uart_bd(PeriphCLK, BaudRate)
+ }
+ static unit16_t compute_uart_bd(unit32_t PeriphCLK, unit32_t BaudRate)
+ {
+	 return ((PeriphCLK+(BaudRate/2U))/BaudRate);
+ }
